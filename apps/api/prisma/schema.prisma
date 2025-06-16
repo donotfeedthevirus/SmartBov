@@ -1,0 +1,111 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  ranchName String?
+  timezone  String   @default("America/Sao_Paulo")
+  cows      Cow[]
+  devices   Device[]
+  groups    Group[]
+  reports   Report[]
+  createdAt DateTime @default(now())
+}
+
+model Group {
+  id     String @id @default(uuid())
+  name   String
+  user   User   @relation(fields:[userId], references:[id])
+  userId String
+  cows   Cow[]
+}
+
+model Cow {
+  id        String    @id @default(uuid())
+  alias     String
+  tagNumber String    @unique
+  status    CowStatus @default(ACTIVE)
+  group     Group?    @relation(fields:[groupId], references:[id])
+  groupId   String?
+  device    Device?   @relation(fields:[deviceId], references:[id])
+  deviceId  String?   @unique
+  alerts    Alert[]
+  // Measurements joined through Device → Measurement
+}
+
+model Device {
+  id        String  @id @default(uuid())
+  serial    String  @unique
+  firmware  String
+  cow       Cow?    @relation(fields:[cowId], references:[id])
+  cowId     String? @unique
+  lastSeen  DateTime?
+  battery   Int?
+  commands  BuzzerCommand[]
+  measurements Measurement[]
+}
+
+model Measurement {
+  id          BigInt   @id @default(autoincrement())
+  ts          DateTime @db.Timestamptz(6) @index
+  bpm         Int
+  surfaceTemp Float
+  activityIdx Float
+  lat         Float?
+  lng         Float?
+  device      Device   @relation(fields:[deviceId], references:[id])
+  deviceId    String   @index
+}
+
+model Alert {
+  id          String        @id @default(uuid())
+  type        AlertType
+  message     String
+  metricVal   Float?
+  severity    AlertSeverity
+  triggeredAt DateTime @default(now()) @index
+  resolvedAt  DateTime?
+  cow         Cow           @relation(fields:[cowId], references:[id])
+  cowId       String
+}
+
+model BuzzerCommand {
+  id        String  @id @default(uuid())
+  device    Device  @relation(fields:[deviceId], references:[id])
+  deviceId  String
+  duration  Int      // seconds
+  consumed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id          String    @id @default(uuid())
+  ownerId     String
+  type        ReportType
+  params      Json
+  fileKey     String?
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+}
+
+enum CowStatus     { ACTIVE INACTIVE SOLD }
+enum AlertType     { FEVER HR_HIGH NO_MOVEMENT OFFLINE }
+enum AlertSeverity { INFO WARN CRITICAL }
+enum ReportType    { TIMESERIES_CSV DAILY_SUMMARY_PDF }
+enum ReportStatus  { PENDING READY FAILED }
