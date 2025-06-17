@@ -12,10 +12,15 @@ async function main() {
     create: {
       email: "admin@smartbov.dev",
       password: hash,
-      role: "ADMIN",         // ← NEW
-      ranchName: "Demo Ranch"
-    }
+      role: "ADMIN",
+      ranchName: "Demo Ranch",
+    },
   });
 }
 
-main().finally(() => prisma.$disconnect());
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());
