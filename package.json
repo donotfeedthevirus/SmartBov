@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-"scripts": {
-  "dev": "docker compose up -d postgres broker && pnpm --filter api dev",
-  "seed": "pnpm --filter api exec ts-node prisma/seed.ts",
-  "stop": "docker compose down"
-}
+  "scripts": {
+    "dev": "docker compose up -d postgres broker && pnpm --filter api dev",
+    "seed": "pnpm --filter api exec ts-node prisma/seed.ts",
+    "stop": "docker compose down"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -15,24 +14,29 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id        String  @id @default(uuid())
+  email     String  @unique
   password  String
+  role      UserRole @default(USER)
   ranchName String?
-  timezone  String   @default("America/Sao_Paulo")
-  cows      Cow[]
-  devices   Device[]
-  groups    Group[]
-  reports   Report[]
+  timezone  String  @default("America/Sao_Paulo")
+
+  cows    Cow[]
+  devices Device[]
+  groups  Group[]
+  reports Report[]
+
   createdAt DateTime @default(now())
 }
 
 model Group {
-  id     String @id @default(uuid())
-  name   String
-  user   User   @relation(fields:[userId], references:[id])
+  id   String @id @default(uuid())
+  name String
+
+  user   User   @relation(fields: [userId], references: [id])
   userId String
-  cows   Cow[]
+
+  cows Cow[]
 }
 
 model Cow {
@@ -40,36 +44,51 @@ model Cow {
   alias     String
   tagNumber String    @unique
   status    CowStatus @default(ACTIVE)
-  group     Group?    @relation(fields:[groupId], references:[id])
-  groupId   String?
-  device    Device?   @relation(fields:[deviceId], references:[id])
-  deviceId  String?   @unique
-  alerts    Alert[]
-  // Measurements joined through Device → Measurement
+
+  // ─── Relations ───────────────────────────────────────────────
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  group   Group?  @relation(fields: [groupId], references: [id])
+  groupId String?
+
+  deviceId String? @unique
+  device   Device? @relation(fields: [deviceId], references: [id])
+
+  alerts Alert[]
 }
 
 model Device {
-  id        String  @id @default(uuid())
-  serial    String  @unique
-  firmware  String
-  cow       Cow?    @relation(fields:[cowId], references:[id])
-  cowId     String? @unique
-  lastSeen  DateTime?
-  battery   Int?
-  commands  BuzzerCommand[]
+  id       String    @id @default(uuid())
+  serial   String    @unique
+  firmware String
+  lastSeen DateTime?
+  battery  Int?
+
+  // back-reference – FK lives on Cow
+  cow Cow?
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  commands     BuzzerCommand[]
   measurements Measurement[]
 }
 
 model Measurement {
   id          BigInt   @id @default(autoincrement())
-  ts          DateTime @db.Timestamptz(6) @index
+  ts          DateTime @db.Timestamptz(6)
   bpm         Int
   surfaceTemp Float
   activityIdx Float
   lat         Float?
   lng         Float?
-  device      Device   @relation(fields:[deviceId], references:[id])
-  deviceId    String   @index
+
+  device   Device @relation(fields: [deviceId], references: [id])
+  deviceId String
+
+  @@index([ts])
+  @@index([deviceId])
 }
 
 model Alert {
@@ -78,34 +97,73 @@ model Alert {
   message     String
   metricVal   Float?
   severity    AlertSeverity
-  triggeredAt DateTime @default(now()) @index
+  triggeredAt DateTime      @default(now())
   resolvedAt  DateTime?
-  cow         Cow           @relation(fields:[cowId], references:[id])
-  cowId       String
+
+  cow   Cow    @relation(fields: [cowId], references: [id])
+  cowId String
+
+  @@index([triggeredAt])
 }
 
 model BuzzerCommand {
-  id        String  @id @default(uuid())
-  device    Device  @relation(fields:[deviceId], references:[id])
-  deviceId  String
-  duration  Int      // seconds
+  id        String   @id @default(uuid())
+  duration  Int // seconds
   consumed  Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  device   Device @relation(fields: [deviceId], references: [id])
+  deviceId String
 }
 
 model Report {
-  id          String    @id @default(uuid())
-  ownerId     String
+  id          String       @id @default(uuid())
   type        ReportType
   params      Json
   fileKey     String?
   status      ReportStatus @default(PENDING)
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime     @default(now())
   completedAt DateTime?
+
+  owner   User   @relation(fields: [ownerId], references: [id])
+  ownerId String
 }
 
-enum CowStatus     { ACTIVE INACTIVE SOLD }
-enum AlertType     { FEVER HR_HIGH NO_MOVEMENT OFFLINE }
-enum AlertSeverity { INFO WARN CRITICAL }
-enum ReportType    { TIMESERIES_CSV DAILY_SUMMARY_PDF }
-enum ReportStatus  { PENDING READY FAILED }
+/**
+ * ─── Enums ───────────────────────────────────────────────────
+ */
+
+enum CowStatus {
+  ACTIVE
+  INACTIVE
+  SOLD
+}
+
+enum AlertType {
+  FEVER
+  HR_HIGH
+  NO_MOVEMENT
+  OFFLINE
+}
+
+enum AlertSeverity {
+  INFO
+  WARN
+  CRITICAL
+}
+
+enum ReportType {
+  TIMESERIES_CSV
+  DAILY_SUMMARY_PDF
+}
+
+enum ReportStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
