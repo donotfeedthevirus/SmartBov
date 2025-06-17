@@ -6,6 +6,7 @@ import { authRouter } from "./routes/auth.route";
 import { userRouter } from "./routes/user.route";
 import { cowRouter } from "./routes/cow.route";
 import { deviceRouter } from "./routes/device.route";
+import { groupRouter } from "./routes/group.route";
 
 export const app = express();
 app.use(express.json());
@@ -14,6 +15,7 @@ app.use("/auth", authRouter);
 app.use("/user", userRouter);
 app.use("/cow", cowRouter);
 app.use("/device", deviceRouter);
+app.use("/group", groupRouter);
 
 app.get("/health", (_, res) => {
   res.json({ status: "ok", env: env.nodeEnv });
